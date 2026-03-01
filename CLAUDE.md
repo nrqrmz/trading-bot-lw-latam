@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Educational crypto trading bot for the Le Wagon x Binance ML Course. The entire bot lives in a single class `CryptoBot` in `cryptobot/bot.py`. Most methods are stubbed with `# TODO: Implementar` — the course flow is for students to implement them incrementally.
+Educational crypto trading bot for the Crypto + AI Le Wagon Course. The entire bot lives in a single class `CryptoBot` in `cryptobot/bot.py`. Most methods are stubbed with `# TODO: Implementar` — the course flow is for students to implement them incrementally.
 
 ## Setup & Commands
 
@@ -31,7 +31,7 @@ fetch_data() → create_features() → detect_regime() → recommend_strategies(
 - `scikit-learn` — GMM for regime detection, ML models (LogReg, SVM, RF), GridSearchCV with TimeSeriesSplit
 - `xgboost` — Gradient boosting model option
 - `backtesting` (backtesting.py) — Strategy backtesting engine; requires DataFrame with capitalized columns (Open, High, Low, Close, Volume)
-- `plotly` — All visualizations use Binance brand colors (`BINANCE_COLORS` dict)
+- `plotly` — All visualizations use colors in COLOR_PALETTE dict
 - `joblib` — Model persistence (save/load as .pkl)
 
 **Strategy registry**: `STRATEGY_REGISTRY` dict maps strategy keys (`trend_following`, `mean_reversion`, `momentum`) to metadata including best/worst market regimes. Regime detection uses 3-class GMM: Bull, Bear, Sideways.

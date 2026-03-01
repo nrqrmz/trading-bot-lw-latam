@@ -51,7 +51,7 @@ STRATEGY_REGISTRY = {
     },
 }
 
-BINANCE_COLORS = {
+COLOR_PALETTE = {
     "yellow": "#F0B90B",
     "dark": "#1E2329",
     "green": "#0ECB81",
@@ -645,7 +645,7 @@ class CryptoBot:
         # TODO: Implementar
         # 1. Llamar self.feature_importance(top_n)
         # 2. Plotly horizontal bar chart
-        # 3. Colores Binance
+        # 3. Colores de la paleta definida
         pass
 
     # ════════════════════════════════════════════════════════════
@@ -760,7 +760,7 @@ class CryptoBot:
         Gráfico de velas japonesas (candlestick) con Plotly.
 
         Muestra OHLC data con volumen en panel inferior.
-        Colores: Binance brand (verde/rojo).
+        Colores: paleta definida en COLOR_PALETTE.
 
         Raises
         ------
@@ -771,7 +771,7 @@ class CryptoBot:
         # TODO: Implementar
         # 1. go.Candlestick con OHLC
         # 2. Panel de volumen abajo
-        # 3. Colores Binance
+        # 3. Colores de la paleta definida (COLOR_PALETTE)
         # 4. Layout responsive
         pass
 

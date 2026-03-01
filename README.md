@@ -1,4 +1,4 @@
-# 🤖 CryptoBot — Le Wagon x Binance ML Course
+# 🤖 CryptoBot — Crypto + AI Course
 
 Trading bot educativo para criptomonedas. Integra data pipeline, feature engineering, detección de régimen de mercado, modelos ML, backtesting y paper trading.
 

@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.backends._legacy:_Backend"
 
 [project]
-name = "cryptobot-lewagon"
+name = "cryptobot"
 version = "0.1.0"
-description = "Trading bot educativo — Le Wagon x Binance ML Course"
+description = "Trading bot educativo — Crypto + AI Course"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
