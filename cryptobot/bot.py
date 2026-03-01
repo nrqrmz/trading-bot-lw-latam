@@ -57,7 +57,11 @@ class CryptoBot(
     timeframe : str
         Temporalidad de las velas. Opciones: "1h", "4h", "1d" (default).
     exchange : str
-        Exchange a usar via CCXT (default: "bybit").
+        Exchange a usar via CCXT (default: "binanceus").
+        Verificados desde Google Colab: "binanceus", "kraken",
+        "cryptocom", "okx", "coinbase", "bitget", "kucoin",
+        "gemini", "poloniex".
+        ⚠️ No funcionan desde Colab: "binance", "bybit" (geo-block US).
     max_position_pct : float
         Máximo porcentaje del balance por trade (default: 0.10 = 10%).
     stop_loss_pct : float
@@ -106,7 +110,7 @@ class CryptoBot(
         self,
         symbol: str = "BTC",
         timeframe: str = "1d",
-        exchange: str = "bybit",
+        exchange: str = "binanceus",
         max_position_pct: float = 0.10,
         stop_loss_pct: float = 0.05,
         take_profit_pct: float = 0.10,
