@@ -139,10 +139,10 @@ class ModelsMixin:
             spread_std = spread.rolling(20).std()
             z_score = (spread - spread_mean) / spread_std
 
-            # Target direccional: ¿el spread subirá? (= ETH outperforms BTC → BUY)
+            # Target direccional: ¿el precio subirá?
             # Los features z_score, spread_z_abs, pair_correlation informan al modelo
             # cuándo las condiciones de mean reversion favorecen comprar vs vender
-            df["target"] = (spread.shift(-1) > spread).astype(int)
+            df["target"] = (forward_return > 0).astype(int)
 
             # Agregar features para el modelo
             df["spread"] = spread
