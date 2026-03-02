@@ -14,7 +14,7 @@ pip install git+https://github.com/TU-USUARIO/cryptobot-lewagon.git
 from cryptobot_lewagon import CryptoBot
 
 # 1. Crear bot
-bot = CryptoBot(symbol="BTC", timeframe="1d", exchange="binanceus")
+bot = CryptoBot(symbol="BTC", timeframe="1d")
 
 # 2. Cargar datos
 bot.fetch_data(last_days=90)
