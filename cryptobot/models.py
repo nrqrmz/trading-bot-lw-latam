@@ -192,8 +192,8 @@ class ModelsMixin:
         for name, metrics in results.items():
             star = " ⭐" if name == best_name else ""
             print(
-                f"{name:<25} {metrics['accuracy']:>9.4f} {metrics['precision']:>9.4f} "
-                f"{metrics['recall']:>9.4f} {metrics['f1']:>9.4f}{star}"
+                f"{name:<25} {metrics['accuracy']:>10.4f} {metrics['precision']:>10.4f} "
+                f"{metrics['recall']:>10.4f} {metrics['f1']:>10.4f}{star}"
             )
 
         print(f"\n✅ Mejor modelo: {best_name} (F1: {results[best_name]['f1']:.4f})")
