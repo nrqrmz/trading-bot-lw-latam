@@ -60,12 +60,13 @@ class BacktestMixin:
                 f"recibido: {leverage}"
             )
 
-        from backtesting import Strategy
-        from backtesting.lib import FractionalBacktest
+        from backtesting import Backtest, Strategy
         from .constants import STRATEGY_REGISTRY
 
         # Convertir parámetros para backtesting.py
         size = position_pct / 100       # ej: 5 → 0.05
+        if size >= 1:
+            size = 0.9999  # Asegurar interpretación como fracción del equity
         margin = 1 / leverage           # ej: 10x → 0.1
 
         # Alinear datos OHLCV con el índice de señales
@@ -93,12 +94,24 @@ class BacktestMixin:
                 if idx == len(self.signal_array) - 1 and self.position:
                     self.position.close()
 
-        bt = FractionalBacktest(
-            bt_data, SignalStrategy,
-            cash=cash, commission=commission, margin=margin,
-            exclusive_orders=True,
-            finalize_trades=True
-        )
+        avg_price = bt_data["Close"].mean()
+        use_fractional = avg_price > cash
+
+        if use_fractional:
+            from backtesting.lib import FractionalBacktest
+            bt = FractionalBacktest(
+                bt_data, SignalStrategy,
+                cash=cash, commission=commission, margin=margin,
+                exclusive_orders=True,
+                finalize_trades=True,
+            )
+        else:
+            bt = Backtest(
+                bt_data, SignalStrategy,
+                cash=cash, commission=commission, margin=margin,
+                exclusive_orders=True,
+                finalize_trades=True,
+            )
         stats = bt.run()
 
         self.backtest_results = stats
