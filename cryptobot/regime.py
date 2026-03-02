@@ -3,6 +3,9 @@
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import ta as ta_lib
+from sklearn.decomposition import PCA
+from sklearn.feature_selection import VarianceThreshold
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
 
@@ -14,15 +17,16 @@ class RegimeMixin:
 
     def detect_regime(self, n_regimes: int = 3) -> "RegimeMixin":
         """
-        Detecta el régimen de mercado actual usando Gaussian Mixture Model.
+        Detecta el régimen de mercado actual usando pipeline PCA + GMM.
 
-        Clasifica el mercado en regímenes usando 13 features multi-escala:
-        - Retornos y tendencia en 3 timeframes (short/medium/long)
-        - Volatilidad en 3 timeframes + Garman-Klass + ratio de expansión
-        - Volume ratio, RSI, distancia a SMA, drawdown
-
-        El GMM provee probabilidades suaves para cada régimen,
-        no una clasificación binaria. Ejemplo: "72% Bull, 20% Sideways, 8% Bear".
+        Pipeline hedge-fund quality:
+        1. 86+ features via ta.add_all_ta_features() + custom features
+        2. Exclusión de features inútiles (binarias, precio absoluto, acumulativos)
+        3. Limpieza (ffill, inf→NaN, drop columnas >50% NaN, dropna filas)
+        4. VarianceThreshold para eliminar features near-constant
+        5. Filtro de correlación (|r| > 0.95)
+        6. PCA retiene 95% de varianza
+        7. GMM robusto (n_init=10, full covariance)
 
         Parameters
         ----------
@@ -42,74 +46,88 @@ class RegimeMixin:
         """
         self._require_features()
 
-        # ── Constantes de ventana ────────────────────────
-        SHORT, MEDIUM, LONG = 7, 21, 50
-        RSI_WINDOW = 14
-        STRUCTURAL_DESIRED = 200
-
         df = self.data.copy()
         n = len(df)
 
-        # Ventana estructural adaptativa
-        long_structural = min(STRUCTURAL_DESIRED, n - LONG)
-        long_structural = max(long_structural, LONG)  # piso en 50
+        # ── Constantes de ventana ────────────────────────
+        SHORT, MEDIUM, LONG = 7, 21, 50
+        STRUCTURAL_DESIRED = 200
+        long_structural = max(min(STRUCTURAL_DESIRED, n - LONG), LONG)
 
-        # ── 1. Feature engineering: 13 indicadores ───────
-        returns = df["Close"].pct_change()
+        # Columnas a excluir del clustering
+        EXCLUDE_COLS = {
+            # Raw OHLCV
+            "Open", "High", "Low", "Close", "Volume",
+            # Binarias (0/1 — no informativas para clustering continuo)
+            "volatility_bbhi", "volatility_bbli",
+            "volatility_kchi", "volatility_kcli",
+            "trend_psar_up_indicator", "trend_psar_down_indicator",
+            # Precio absoluto (scale-dependent, redundante con %B/width)
+            "trend_ema_fast", "trend_ema_slow",
+            "trend_sma_fast", "trend_sma_slow",
+            "volatility_bbh", "volatility_bbl", "volatility_bbm",
+            "volatility_kch", "volatility_kcl", "volatility_kcc",
+            "volatility_dch", "volatility_dcl", "volatility_dcm",
+            "trend_ichimoku_conv", "trend_ichimoku_base",
+            "trend_ichimoku_a", "trend_ichimoku_b",
+            "trend_visual_ichimoku_a", "trend_visual_ichimoku_b",
+            "trend_psar_up", "trend_psar_down",
+            "trend_dpo", "momentum_kama",
+            # Acumulativos (no estacionarios, sin techo)
+            "volume_adi", "volume_obv", "volume_vpt",
+            "volume_nvi", "others_cr", "volume_vwap",
+        }
 
-        regime_features = pd.DataFrame(index=df.index)
-        # Retornos
-        regime_features["returns"] = returns
-        # Tendencia multi-escala
-        regime_features["trend_short"] = returns.rolling(SHORT).mean()
-        regime_features["trend_medium"] = returns.rolling(MEDIUM).mean()
-        regime_features["trend_long"] = returns.rolling(LONG).mean()
-        # Volatilidad multi-escala
-        regime_features["vol_short"] = returns.rolling(SHORT).std()
-        regime_features["vol_medium"] = returns.rolling(MEDIUM).std()
-        regime_features["vol_long"] = returns.rolling(LONG).std()
+        # ── 1. Features desde ta library (86+) ──────────
+        df_ta = ta_lib.add_all_ta_features(
+            df, open="Open", high="High", low="Low", close="Close", volume="Volume"
+        )
+
+        # ── 2. Features custom (no incluidos en ta) ─────
+        returns = df_ta["Close"].pct_change()
+        df_ta["trend_7"] = returns.rolling(SHORT).mean()
+        df_ta["trend_21"] = returns.rolling(MEDIUM).mean()
+        df_ta["trend_50"] = returns.rolling(LONG).mean()
+        df_ta["vol_7"] = returns.rolling(SHORT).std()
+        df_ta["vol_21"] = returns.rolling(MEDIUM).std()
+        df_ta["vol_50"] = returns.rolling(LONG).std()
 
         # Garman-Klass volatility
-        log_hl = np.log(df["High"] / df["Low"]) ** 2
-        log_co = np.log(df["Close"] / df["Open"]) ** 2
-        gk_vol = np.sqrt(
+        log_hl = np.log(df_ta["High"] / df_ta["Low"]) ** 2
+        log_co = np.log(df_ta["Close"] / df_ta["Open"]) ** 2
+        df_ta["gk_volatility"] = np.sqrt(
             (0.5 * log_hl - (2 * np.log(2) - 1) * log_co).rolling(MEDIUM).mean()
         )
-        regime_features["gk_volatility"] = gk_vol
 
-        # Volatility ratio (expansión/contracción)
-        regime_features["vol_ratio"] = (
-            regime_features["vol_short"] / regime_features["vol_long"]
-        )
+        df_ta["vol_ratio"] = df_ta["vol_7"] / df_ta["vol_50"]
+        df_ta["volume_ratio"] = df_ta["Volume"] / df_ta["Volume"].rolling(MEDIUM).mean()
 
-        # Volume ratio
-        regime_features["volume_ratio"] = (
-            df["Volume"] / df["Volume"].rolling(MEDIUM).mean()
-        )
+        sma_structural = df_ta["Close"].rolling(long_structural).mean()
+        df_ta["dist_sma_structural"] = (df_ta["Close"] - sma_structural) / sma_structural
 
-        # RSI manual
-        delta = df["Close"].diff()
-        gain = delta.where(delta > 0, 0).rolling(RSI_WINDOW).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(RSI_WINDOW).mean()
-        rs = gain / loss
-        regime_features["rsi"] = 100 - (100 / (1 + rs))
+        rolling_high = df_ta["Close"].rolling(long_structural).max()
+        df_ta["drawdown"] = (df_ta["Close"] - rolling_high) / rolling_high
 
-        # Distancia desde SMA estructural
-        sma_structural = df["Close"].rolling(long_structural).mean()
-        regime_features["dist_sma"] = (df["Close"] - sma_structural) / sma_structural
+        # Guardar returns para mapeo de clusters
+        df_ta["_returns"] = returns
 
-        # Drawdown desde máximo rolling
-        rolling_high = df["Close"].rolling(long_structural).max()
-        regime_features["drawdown"] = (df["Close"] - rolling_high) / rolling_high
+        # ── 3. Seleccionar features para GMM ─────────────
+        exclude = EXCLUDE_COLS | {"_returns"}
+        feature_cols = [c for c in df_ta.columns if c not in exclude]
+        regime_features = df_ta[feature_cols].copy()
 
-        # ── 2. Limpieza ──────────────────────────────────
-        regime_features = regime_features.replace([np.inf, -np.inf], np.nan)
+        # ── 4. Limpieza ─────────────────────────────────
+        regime_features.ffill(inplace=True)
+        regime_features.replace([np.inf, -np.inf], np.nan, inplace=True)
 
-        # Si volume_ratio es todo NaN (pares sin volumen), dropear
-        if regime_features["volume_ratio"].isna().all():
-            regime_features = regime_features.drop(columns=["volume_ratio"])
+        # Drop columnas con >50% NaN
+        thresh = len(regime_features) * 0.5
+        regime_features.dropna(axis=1, thresh=int(thresh), inplace=True)
 
-        regime_features = regime_features.dropna()
+        # Drop filas con NaN restantes (warmup de indicadores)
+        regime_features.dropna(inplace=True)
+
+        n_raw = regime_features.shape[1]
 
         if len(regime_features) < n_regimes * 5:
             import warnings
@@ -118,28 +136,45 @@ class RegimeMixin:
                 f"Considere usar más datos (last_days más alto)."
             )
 
-        # ── 3. Escalar y fit GMM ─────────────────────────
+        # ── 5. Curación automatizada ─────────────────────
+        # 5a. Escalar
         scaler = StandardScaler()
-        X = scaler.fit_transform(regime_features)
+        X_scaled = scaler.fit_transform(regime_features)
 
+        # 5b. VarianceThreshold — elimina features near-constant
+        var_selector = VarianceThreshold(threshold=1e-10)
+        X_selected = var_selector.fit_transform(X_scaled)
+
+        # 5c. Correlación — de cada par con |r| > 0.95, eliminar uno
+        corr = pd.DataFrame(X_selected).corr().abs()
+        upper = corr.where(np.triu(np.ones(corr.shape), k=1).astype(bool))
+        to_drop = [col for col in upper.columns if any(upper[col] > 0.95)]
+        X_curated = np.delete(X_selected, to_drop, axis=1)
+
+        n_after_curation = X_curated.shape[1]
+
+        # ── 6. PCA — retener 95% varianza ───────────────
+        pca = PCA(n_components=0.95, random_state=42)
+        X_pca = pca.fit_transform(X_curated)
+
+        # ── 7. GMM robusto ───────────────────────────────
         gmm = GaussianMixture(
             n_components=n_regimes,
             covariance_type="full",
-            n_init=5,
+            n_init=10,
             random_state=42,
         )
-        gmm.fit(X)
+        gmm.fit(X_pca)
 
-        # ── 4. Predecir regímenes ────────────────────────
-        labels = gmm.predict(X)
+        # ── 8. Predecir y mapear clusters → labels ──────
+        labels = gmm.predict(X_pca)
 
-        # ── 5. Mapear clusters → labels semánticos ───────
-        regime_features = regime_features.copy()
-        regime_features["cluster"] = labels
-        mean_returns = regime_features.groupby("cluster")["returns"].mean()
+        # Usar returns alineados para mapeo semántico
+        aligned_returns = df_ta.loc[regime_features.index, "_returns"]
+        cluster_returns = pd.DataFrame({"cluster": labels, "returns": aligned_returns.values})
+        mean_returns = cluster_returns.groupby("cluster")["returns"].mean()
 
         sorted_clusters = mean_returns.sort_values().index.tolist()
-        # menor return → Bear (0), medio → Sideways (1), mayor → Bull (2)
         cluster_to_regime = {
             sorted_clusters[0]: 0,   # Bear
             sorted_clusters[1]: 1,   # Sideways
@@ -155,28 +190,28 @@ class RegimeMixin:
         common_idx = self.features.index.intersection(mapped_labels.index)
         self.features.loc[common_idx, "regime"] = mapped_labels.loc[common_idx].values
 
-        # ── 6. Probabilidades del último período ─────────
-        last_point = X[-1].reshape(1, -1)
+        # ── 9. Probabilidades del último período ─────────
+        last_point = X_pca[-1].reshape(1, -1)
         proba = gmm.predict_proba(last_point)[0]
 
-        # Mapear probabilidades a labels semánticos
         regime_probs = {}
         for cluster_id, regime_id in cluster_to_regime.items():
             label = REGIME_LABELS[regime_id]
             regime_probs[label] = round(proba[cluster_id], 4)
 
-        # ── 7. Guardar estado ────────────────────────────
+        # ── 10. Guardar estado ───────────────────────────
         last_regime_id = cluster_to_regime[labels[-1]]
         regime_label = REGIME_LABELS[last_regime_id]
         self.regime = regime_label.split()[0]  # "Bull", "Bear", o "Sideways"
         self.regime_probabilities = regime_probs
         self.regime_model = gmm
 
-        # ── 8. Print informativo ─────────────────────────
+        # ── 11. Print informativo ────────────────────────
         confidence = proba[labels[-1]]
         print(f"📊 Régimen detectado: {regime_label} (confianza: {confidence:.1%})")
-        print(f"   Features: {X.shape[1]} indicadores | Ventana estructural: {long_structural}d")
+        print(f"   Pipeline: {n_raw} features → {n_after_curation} curados → {X_pca.shape[1]} PCA")
         print(f"   Períodos analizados: {len(regime_features)} de {n} disponibles")
+        print(f"   BIC: {gmm.bic(X_pca):.0f}")
 
         return self
 
