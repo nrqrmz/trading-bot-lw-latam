@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 
+from .config import SIGNAL_CONFIDENCE_THRESHOLD
 from .constants import STRATEGY_REGISTRY
 
 
@@ -64,7 +65,7 @@ class SignalsMixin:
         if hasattr(self.model, "predict_proba"):
             probas = self.model.predict_proba(X_clean.values)
             confidence = probas.max(axis=1)
-            signals = np.where(confidence < 0.6, 0, signals)
+            signals = np.where(confidence < SIGNAL_CONFIDENCE_THRESHOLD, 0, signals)
             last_confidence = confidence[-1] if len(confidence) > 0 else None
 
         # ── 6. Crear Series alineada al index completo ────────

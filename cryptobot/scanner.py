@@ -5,13 +5,14 @@ import sys
 
 import pandas as pd
 
+from .config import SCANNER_LAST_N, SCANNER_SYMBOLS
 from .constants import STRATEGY_REGISTRY
 
 
 class ScannerMixin:
     """Métodos de scanner: scan()."""
 
-    def scan(self, symbols: list = None, last_n: int = 100) -> pd.DataFrame:
+    def scan(self, symbols: list = None, last_n: int = SCANNER_LAST_N) -> pd.DataFrame:
         """
         Escanea múltiples criptomonedas y muestra régimen + estrategia recomendada.
 
@@ -41,7 +42,7 @@ class ScannerMixin:
         bot actual pero NO modifica su estado.
         """
         if symbols is None:
-            symbols = ["BTC", "ETH", "SOL", "BNB", "XRP"]
+            symbols = list(SCANNER_SYMBOLS)
 
         # Importar aquí para evitar circular import
         from .bot import CryptoBot

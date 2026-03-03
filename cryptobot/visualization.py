@@ -3,6 +3,7 @@
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from .config import CHART_HEIGHT_MAIN, CHART_HEIGHT_SECONDARY, CHART_ROW_HEIGHTS
 from .constants import COLOR_PALETTE
 
 
@@ -28,7 +29,7 @@ class VisualizationMixin:
             rows=2,
             cols=1,
             shared_xaxes=True,
-            row_heights=[0.7, 0.3],
+            row_heights=CHART_ROW_HEIGHTS,
             vertical_spacing=0.05,
         )
 
@@ -71,7 +72,7 @@ class VisualizationMixin:
             plot_bgcolor=COLOR_PALETTE["dark"],
             paper_bgcolor=COLOR_PALETTE["dark"],
             xaxis_rangeslider_visible=False,
-            height=600,
+            height=CHART_HEIGHT_MAIN,
         )
 
         fig.show()
@@ -151,7 +152,7 @@ class VisualizationMixin:
             plot_bgcolor=COLOR_PALETTE["dark"],
             paper_bgcolor=COLOR_PALETTE["dark"],
             xaxis_rangeslider_visible=False,
-            height=500,
+            height=CHART_HEIGHT_SECONDARY,
         )
 
         fig.show()
@@ -180,7 +181,7 @@ class VisualizationMixin:
             rows=2,
             cols=1,
             shared_xaxes=True,
-            row_heights=[0.7, 0.3],
+            row_heights=CHART_ROW_HEIGHTS,
             vertical_spacing=0.05,
         )
 
@@ -235,7 +236,7 @@ class VisualizationMixin:
             template="plotly_dark",
             plot_bgcolor=COLOR_PALETTE["dark"],
             paper_bgcolor=COLOR_PALETTE["dark"],
-            height=600,
+            height=CHART_HEIGHT_MAIN,
             annotations=[
                 dict(
                     xref="paper",

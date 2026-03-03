@@ -15,6 +15,14 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
+from .config import (
+    ML_CV_SPLITS,
+    ML_N_ESTIMATORS,
+    ML_OVERFITTING_THRESHOLD,
+    ML_TEST_SIZE,
+    ML_WINDOW_SIZE,
+    SMA_FAST_WINDOW,
+)
 from .constants import COLOR_PALETTE
 
 
@@ -24,8 +32,8 @@ class ModelsMixin:
     def train_models(
         self,
         window: str = "expanding",
-        window_size: int = 60,
-        test_size: float = 0.2,
+        window_size: int = ML_WINDOW_SIZE,
+        test_size: float = ML_TEST_SIZE,
     ) -> "ModelsMixin":
         """
         Entrena y compara múltiples modelos ML para la estrategia seleccionada.
@@ -99,7 +107,7 @@ class ModelsMixin:
         elif self.selected_strategy == "mean_reversion":
             # Target = 1 cuando precio se desvía de SMA_20 y el siguiente
             # movimiento va hacia la media
-            sma = df["Close"].rolling(20).mean()
+            sma = df["Close"].rolling(SMA_FAST_WINDOW).mean()
             deviation = df["Close"] - sma
             # Si está por encima de la media y baja, o por debajo y sube → revierte
             df["target"] = (
@@ -243,7 +251,7 @@ class ModelsMixin:
             self._X_test = None
             self._y_test = None
 
-        tscv = TimeSeriesSplit(n_splits=5)
+        tscv = TimeSeriesSplit(n_splits=ML_CV_SPLITS)
 
         # ── 4. Definir modelos ─────────────────────────────
         models = {
@@ -257,12 +265,12 @@ class ModelsMixin:
             ]),
             "random_forest": Pipeline([
                 ("scaler", StandardScaler()),
-                ("model", RandomForestClassifier(n_estimators=100, random_state=42)),
+                ("model", RandomForestClassifier(n_estimators=ML_N_ESTIMATORS, random_state=42)),
             ]),
             "xgboost": Pipeline([
                 ("scaler", StandardScaler()),
                 ("model", XGBClassifier(
-                    n_estimators=100,
+                    n_estimators=ML_N_ESTIMATORS,
                     eval_metric="logloss",
                     verbosity=0,
                     random_state=42,
@@ -270,7 +278,7 @@ class ModelsMixin:
             ]),
             "adaboost": Pipeline([
                 ("scaler", StandardScaler()),
-                ("model", AdaBoostClassifier(n_estimators=100, random_state=42)),
+                ("model", AdaBoostClassifier(n_estimators=ML_N_ESTIMATORS, random_state=42)),
             ]),
         }
 
@@ -387,7 +395,7 @@ class ModelsMixin:
             # Warning de overfitting
             cv_f1 = cv_metrics["f1"]
             oos_f1 = self._oos_metrics["f1"]
-            if cv_f1 > 0 and oos_f1 < 0.7 * cv_f1:
+            if cv_f1 > 0 and oos_f1 < ML_OVERFITTING_THRESHOLD * cv_f1:
                 print(f"\n  ⚠️  ALERTA: F1 OOS ({oos_f1:.4f}) < 70% del F1 CV ({cv_f1:.4f})")
                 print(f"  ⚠️  Posible overfitting. Considerar: más datos, menos features, regularización.")
 
@@ -475,7 +483,7 @@ class ModelsMixin:
 
         # ── 3. GridSearchCV con TimeSeriesSplit ────────────
         # Pre-filtrar splits para excluir folds con una sola clase en training
-        tscv_grid = TimeSeriesSplit(n_splits=5)
+        tscv_grid = TimeSeriesSplit(n_splits=ML_CV_SPLITS)
         cv_splits = [
             (tr, te) for tr, te in tscv_grid.split(self._X_train)
             if len(np.unique(self._y_train[tr])) >= 2
@@ -501,7 +509,7 @@ class ModelsMixin:
         self.model = grid_search.best_estimator_
 
         # Calcular nuevas métricas con cross-validation
-        tscv = TimeSeriesSplit(n_splits=5)
+        tscv = TimeSeriesSplit(n_splits=ML_CV_SPLITS)
         all_y_true = []
         all_y_pred = []
 

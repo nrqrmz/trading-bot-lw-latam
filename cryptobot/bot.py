@@ -17,6 +17,7 @@ from typing import Optional
 import pandas as pd
 
 from .backtesting_ import BacktestMixin
+from .config import DEFAULT_SYMBOL, DEFAULT_TIMEFRAME
 from .constants import (
     DEFAULT_EXCHANGE,
     DEFAULT_MAX_POSITION_PCT,
@@ -114,8 +115,8 @@ class CryptoBot(
 
     def __init__(
         self,
-        symbol: str = "BTC",
-        timeframe: str = "1d",
+        symbol: str = DEFAULT_SYMBOL,
+        timeframe: str = DEFAULT_TIMEFRAME,
         exchange: str = DEFAULT_EXCHANGE,
         max_position_pct: float = DEFAULT_MAX_POSITION_PCT,
         stop_loss_pct: float = DEFAULT_STOP_LOSS_PCT,

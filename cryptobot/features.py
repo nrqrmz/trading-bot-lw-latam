@@ -3,6 +3,8 @@
 import ta
 import pandas as pd
 
+from .config import ATR_PERIOD, RSI_PERIOD, SMA_FAST_WINDOW, SMA_SLOW_WINDOW, VOLATILITY_WINDOW
+
 
 class FeaturesMixin:
     """Métodos de feature engineering: create_features()."""
@@ -157,11 +159,11 @@ class FeaturesMixin:
 
         if mode == "core":
             # Medias móviles
-            df["SMA_20"] = ta.trend.sma_indicator(df["Close"], window=20)
-            df["SMA_50"] = ta.trend.sma_indicator(df["Close"], window=50)
+            df["SMA_20"] = ta.trend.sma_indicator(df["Close"], window=SMA_FAST_WINDOW)
+            df["SMA_50"] = ta.trend.sma_indicator(df["Close"], window=SMA_SLOW_WINDOW)
 
             # RSI
-            df["RSI_14"] = ta.momentum.rsi(df["Close"], window=14)
+            df["RSI_14"] = ta.momentum.rsi(df["Close"], window=RSI_PERIOD)
 
             # MACD
             df["MACD"] = ta.trend.macd(df["Close"])
@@ -173,13 +175,13 @@ class FeaturesMixin:
 
             # ATR
             df["ATR_14"] = ta.volatility.average_true_range(
-                df["High"], df["Low"], df["Close"], window=14
+                df["High"], df["Low"], df["Close"], window=ATR_PERIOD
             )
 
             # Indicadores manuales
             df["volume_change"] = df["Volume"].pct_change()
             df["returns"] = df["Close"].pct_change()
-            df["volatility_20"] = df["returns"].rolling(window=20).std()
+            df["volatility_20"] = df["returns"].rolling(window=VOLATILITY_WINDOW).std()
 
             df.dropna(inplace=True)
             n_features = 11
@@ -190,7 +192,7 @@ class FeaturesMixin:
             )
             # add_all_ta_features no genera estos
             df["returns"] = df["Close"].pct_change()
-            df["volatility_20"] = df["returns"].rolling(window=20).std()
+            df["volatility_20"] = df["returns"].rolling(window=VOLATILITY_WINDOW).std()
 
             # ffill para indicadores con NaN por diseño (e.g. PSAR up/down)
             df.ffill(inplace=True)

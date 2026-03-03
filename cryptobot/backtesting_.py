@@ -1,12 +1,14 @@
 """Mixin para backtesting de estrategias."""
 
+from .config import BACKTEST_CASH, BACKTEST_COMMISSION
+
 VALID_LEVERAGE = (1, 2, 3, 5, 10, 20, 50, 100)
 
 
 class BacktestMixin:
     """Métodos de backtesting: backtest() y backtest_plot()."""
 
-    def backtest(self, cash: float = 10_000, commission: float = 0.001,
+    def backtest(self, cash: float = BACKTEST_CASH, commission: float = BACKTEST_COMMISSION,
                  position_pct: float = 100, leverage: int = 1,
                  scope: str = "test") -> "BacktestMixin":
         """

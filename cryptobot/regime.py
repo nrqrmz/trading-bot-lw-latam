@@ -9,6 +9,18 @@ from sklearn.feature_selection import VarianceThreshold
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
 
+from .config import (
+    CHART_HEIGHT_SECONDARY,
+    REGIME_CORRELATION_THRESHOLD,
+    REGIME_GMM_N_INIT,
+    REGIME_LONG_WINDOW,
+    REGIME_MEDIUM_WINDOW,
+    REGIME_NAN_THRESHOLD,
+    REGIME_PCA_VARIANCE,
+    REGIME_SHORT_WINDOW,
+    REGIME_STRUCTURAL_SMA,
+    REGIME_VARIANCE_THRESHOLD,
+)
 from .constants import COLOR_PALETTE, REGIME_LABELS, STRATEGY_REGISTRY
 
 
@@ -50,8 +62,8 @@ class RegimeMixin:
         n = len(df)
 
         # ── Constantes de ventana ────────────────────────
-        SHORT, MEDIUM, LONG = 7, 21, 50
-        STRUCTURAL_DESIRED = 200
+        SHORT, MEDIUM, LONG = REGIME_SHORT_WINDOW, REGIME_MEDIUM_WINDOW, REGIME_LONG_WINDOW
+        STRUCTURAL_DESIRED = REGIME_STRUCTURAL_SMA
         long_structural = max(min(STRUCTURAL_DESIRED, n - LONG), LONG)
 
         # Columnas a excluir del clustering
@@ -121,7 +133,7 @@ class RegimeMixin:
         regime_features.replace([np.inf, -np.inf], np.nan, inplace=True)
 
         # Drop columnas con >50% NaN
-        thresh = len(regime_features) * 0.5
+        thresh = len(regime_features) * REGIME_NAN_THRESHOLD
         regime_features.dropna(axis=1, thresh=int(thresh), inplace=True)
 
         # Drop filas con NaN restantes (warmup de indicadores)
@@ -142,26 +154,26 @@ class RegimeMixin:
         X_scaled = scaler.fit_transform(regime_features)
 
         # 5b. VarianceThreshold — elimina features near-constant
-        var_selector = VarianceThreshold(threshold=1e-5)
+        var_selector = VarianceThreshold(threshold=REGIME_VARIANCE_THRESHOLD)
         X_selected = var_selector.fit_transform(X_scaled)
 
         # 5c. Correlación — de cada par con |r| > 0.95, eliminar uno
         corr = pd.DataFrame(X_selected).corr().abs()
         upper = corr.where(np.triu(np.ones(corr.shape), k=1).astype(bool))
-        to_drop = [col for col in upper.columns if any(upper[col] > 0.95)]
+        to_drop = [col for col in upper.columns if any(upper[col] > REGIME_CORRELATION_THRESHOLD)]
         X_curated = np.delete(X_selected, to_drop, axis=1)
 
         n_after_curation = X_curated.shape[1]
 
         # ── 6. PCA — retener 95% varianza ───────────────
-        pca = PCA(n_components=0.95, random_state=42)
+        pca = PCA(n_components=REGIME_PCA_VARIANCE, random_state=42)
         X_pca = pca.fit_transform(X_curated)
 
         # ── 7. GMM robusto ───────────────────────────────
         gmm = GaussianMixture(
             n_components=n_regimes,
             covariance_type="full",
-            n_init=10,
+            n_init=REGIME_GMM_N_INIT,
             random_state=42,
         )
         gmm.fit(X_pca)
@@ -314,7 +326,7 @@ class RegimeMixin:
             template="plotly_dark",
             plot_bgcolor=COLOR_PALETTE["dark"],
             paper_bgcolor=COLOR_PALETTE["dark"],
-            height=500,
+            height=CHART_HEIGHT_SECONDARY,
         )
 
         fig.show()
