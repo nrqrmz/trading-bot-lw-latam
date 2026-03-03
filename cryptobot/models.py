@@ -289,11 +289,25 @@ class ModelsMixin:
                     X_tr = X_tr[-window_size:]
                     y_tr = y_tr[-window_size:]
 
+                # Skip fold si solo hay una clase en training
+                if len(np.unique(y_tr)) < 2:
+                    continue
+
                 pipeline.fit(X_tr, y_tr)
                 y_pred = pipeline.predict(X_val)
 
                 all_y_true.extend(y_val)
                 all_y_pred.extend(y_pred)
+
+            # Si todos los folds fueron skipped, métricas = 0
+            if len(all_y_true) == 0:
+                results[name] = {
+                    "accuracy": 0.0,
+                    "precision": 0.0,
+                    "recall": 0.0,
+                    "f1": 0.0,
+                }
+                continue
 
             all_y_true = np.array(all_y_true)
             all_y_pred = np.array(all_y_pred)
@@ -460,10 +474,24 @@ class ModelsMixin:
         ])
 
         # ── 3. GridSearchCV con TimeSeriesSplit ────────────
+        # Pre-filtrar splits para excluir folds con una sola clase en training
+        tscv_grid = TimeSeriesSplit(n_splits=5)
+        cv_splits = [
+            (tr, te) for tr, te in tscv_grid.split(self._X_train)
+            if len(np.unique(self._y_train[tr])) >= 2
+        ]
+
+        if len(cv_splits) == 0:
+            raise RuntimeError(
+                "❌ Todos los folds de CV tienen una sola clase en training. "
+                "El target es demasiado desbalanceado para optimizar. "
+                "Intenta con más datos (last_n mayor) o una estrategia diferente."
+            )
+
         grid_search = GridSearchCV(
             pipeline,
             param_grids[model_name],
-            cv=TimeSeriesSplit(n_splits=5),
+            cv=cv_splits,
             scoring="f1",
             n_jobs=-1,
         )
@@ -483,21 +511,33 @@ class ModelsMixin:
             y_train = self._y_train[train_idx]
             y_test = self._y_train[test_idx]
 
+            # Skip fold si solo hay una clase en training
+            if len(np.unique(y_train)) < 2:
+                continue
+
             self.model.fit(X_train, y_train)
             y_pred = self.model.predict(X_test)
 
             all_y_true.extend(y_test)
             all_y_pred.extend(y_pred)
 
-        all_y_true = np.array(all_y_true)
-        all_y_pred = np.array(all_y_pred)
-
-        new_metrics = {
-            "accuracy": accuracy_score(all_y_true, all_y_pred),
-            "precision": precision_score(all_y_true, all_y_pred, zero_division=0),
-            "recall": recall_score(all_y_true, all_y_pred, zero_division=0),
-            "f1": f1_score(all_y_true, all_y_pred, zero_division=0),
-        }
+        # Si todos los folds fueron skipped, métricas = 0
+        if len(all_y_true) == 0:
+            new_metrics = {
+                "accuracy": 0.0,
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+            }
+        else:
+            all_y_true = np.array(all_y_true)
+            all_y_pred = np.array(all_y_pred)
+            new_metrics = {
+                "accuracy": accuracy_score(all_y_true, all_y_pred),
+                "precision": precision_score(all_y_true, all_y_pred, zero_division=0),
+                "recall": recall_score(all_y_true, all_y_pred, zero_division=0),
+                "f1": f1_score(all_y_true, all_y_pred, zero_division=0),
+            }
 
         # Refit en datos de training
         self.model.fit(self._X_train, self._y_train)
