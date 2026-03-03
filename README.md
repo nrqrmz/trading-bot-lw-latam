@@ -13,6 +13,10 @@ pip install git+https://github.com/TU-USUARIO/trading-bot-lw-latam.git
 ```python
 from cryptobot import CryptoBot
 
+# 0. Consultar exchanges disponibles
+CryptoBot.supported_exchanges()              # lista todos los exchanges de CCXT
+CryptoBot.is_exchange_supported("binance")   # True/False
+
 # 1. Crear bot (todos los parámetros tienen defaults)
 bot = CryptoBot(symbol="BTC", timeframe="1d", exchange="binanceus",
                 max_position_pct=0.10, stop_loss_pct=0.05, take_profit_pct=0.10)
