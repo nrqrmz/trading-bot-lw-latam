@@ -77,8 +77,8 @@ class ScannerMixin:
                 tf_hours = {"15m": 0.25, "30m": 0.5, "1h": 1, "4h": 4, "1d": 24}
                 hours_per_candle = tf_hours[self.timeframe]
                 candles_24h = int(24 / hours_per_candle)
-                if len(temp_bot.data) > candles_24h:
-                    price_24h_ago = temp_bot.data["Close"].iloc[-candles_24h]
+                if len(temp_bot.data) > candles_24h + 1:
+                    price_24h_ago = temp_bot.data["Close"].iloc[-(candles_24h + 1)]
                     change_24h = (price - price_24h_ago) / price_24h_ago * 100
                 else:
                     change_24h = 0.0
