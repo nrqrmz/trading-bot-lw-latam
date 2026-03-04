@@ -31,6 +31,8 @@ Trading bot educativo para criptomonedas. Pipeline completo: datos → features 
 pip install git+https://github.com/TU-USUARIO/trading-bot-lw-latam.git
 ```
 
+[↑ Indice](#indice)
+
 ## Quick Start
 
 ```python
@@ -48,6 +50,8 @@ bot.get_signals()                           # genera BUY / SELL / HOLD
 bot.backtest()                              # simula estrategia
 bot.plot_performance()                      # grafico de resultados
 ```
+
+[↑ Indice](#indice)
 
 ## Flujo del Pipeline
 
@@ -73,6 +77,8 @@ fetch_data() → create_features() → detect_regime() → recommend_strategies(
                                                               save() / load()
                                                               scan() / plot_scan()
 ```
+
+[↑ Indice](#indice)
 
 ---
 
@@ -474,6 +480,8 @@ CryptoBot(DataMixin, FeaturesMixin, RegimeMixin, ModelsMixin, SignalsMixin,
 
 </details>
 
+[↑ Indice](#indice)
+
 ---
 
 ## Crear tu Propio Bot (Fork)
@@ -487,6 +495,8 @@ CryptoBot(DataMixin, FeaturesMixin, RegimeMixin, ModelsMixin, SignalsMixin,
 pip install git+https://github.com/TU-USUARIO/trading-bot-lw-latam.git
 ```
 
+[↑ Indice](#indice)
+
 ## Tecnologias
 
 - [CCXT](https://github.com/ccxt/ccxt) — Conexion a exchanges (default: binanceus)
@@ -497,6 +507,8 @@ pip install git+https://github.com/TU-USUARIO/trading-bot-lw-latam.git
 - [backtesting.py](https://kernc.github.io/backtesting.py/) — Backtesting
 - [Plotly](https://plotly.com/) — Visualizacion interactiva
 - [joblib](https://joblib.readthedocs.io/) — Persistencia de modelos (.pkl)
+
+[↑ Indice](#indice)
 
 ## Licencia
 
