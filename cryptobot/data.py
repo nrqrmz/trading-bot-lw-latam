@@ -5,6 +5,8 @@ from typing import Optional
 
 import pandas as pd
 
+from .sentiment import fetch_fear_greed_index
+
 
 class DataMixin:
     """Métodos de data pipeline: fetch_data() y summary()."""
@@ -62,6 +64,7 @@ class DataMixin:
         start: Optional[str] = None,
         end: Optional[str] = None,
         pair_symbol: Optional[str] = None,
+        fear_greed: bool = False,
     ) -> "DataMixin":
         """
         Obtiene datos OHLCV del exchange via CCXT.
@@ -89,6 +92,9 @@ class DataMixin:
         pair_symbol : str, optional
             Símbolo del par secundario para stat_arb (e.g., "ETH").
             Se construye como "{pair_symbol}/USDT".
+        fear_greed : bool, default False
+            Si True, descarga el Fear & Greed Index de alternative.me
+            y lo agrega como columna ``fgi_value`` (0-100).
 
         Returns
         -------
@@ -140,6 +146,46 @@ class DataMixin:
         print(f"   Período: {df.index[0]:%Y-%m-%d} → {df.index[-1]:%Y-%m-%d}")
         print(f"   Registros: {len(df)}")
         print(f"   Precio actual: ${df['Close'].iloc[-1]:,.2f}")
+
+        # ── Fear & Greed Index (opcional) ────────────
+        if fear_greed:
+            if self.symbol != "BTC":
+                print(f"⚠️ FGI está basado en BTC — se usa como proxy para {self.symbol}")
+
+            # Calcular días necesarios del rango de datos
+            days_needed = (df.index[-1] - df.index[0]).days + 2
+            fgi_df = fetch_fear_greed_index(limit=days_needed)
+
+            if fgi_df is not None and not fgi_df.empty:
+                # merge_asof: alinear datos diarios → cualquier timeframe
+                # direction="backward" evita look-ahead bias
+                df = df.sort_index()
+                fgi_df = fgi_df.sort_index()
+                df = pd.merge_asof(
+                    df,
+                    fgi_df,
+                    left_index=True,
+                    right_index=True,
+                    direction="backward",
+                )
+                self.data = df
+                self.fear_greed_enabled = True
+
+                # Clasificación del FGI actual
+                current_fgi = int(df["fgi_value"].iloc[-1])
+                fgi_labels = {
+                    (0, 25): "Extreme Fear",
+                    (25, 50): "Fear",
+                    (50, 75): "Greed",
+                    (75, 101): "Extreme Greed",
+                }
+                fgi_label = next(
+                    label for (lo, hi), label in fgi_labels.items()
+                    if lo <= current_fgi < hi
+                )
+                print(f"😱 Fear & Greed Index: {current_fgi}/100 ({fgi_label})")
+            else:
+                print("⚠️ No se pudo obtener FGI — continuando sin sentimiento")
 
         # ── Fetch par secundario (stat_arb) ───────────
         if pair_symbol is not None:

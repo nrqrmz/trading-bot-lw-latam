@@ -88,6 +88,8 @@ class RegimeMixin:
             # Acumulativos (no estacionarios, sin techo)
             "volume_adi", "volume_obv", "volume_vpt",
             "volume_nvi", "others_cr", "volume_vwap",
+            # Sentimiento externo (no debe sesgar PCA+GMM estructural)
+            "fgi_value",
         }
 
         # ── 1. Features desde ta library (86+) ──────────

@@ -183,8 +183,12 @@ class FeaturesMixin:
             df["returns"] = df["Close"].pct_change()
             df["volatility_20"] = df["returns"].rolling(window=VOLATILITY_WINDOW).std()
 
+            # Incluir FGI si está disponible
+            if getattr(self, "fear_greed_enabled", False) and "fgi_value" in self.data.columns:
+                df["fgi_value"] = self.data["fgi_value"]
+
             df.dropna(inplace=True)
-            n_features = 11
+            n_features = len(df.columns) - 5  # descontar OHLCV originales
 
         elif mode == "full":
             df = ta.add_all_ta_features(

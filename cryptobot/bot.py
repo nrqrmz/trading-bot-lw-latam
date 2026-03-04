@@ -169,6 +169,7 @@ class CryptoBot(
         self.trades: list = []
         self.pair_data: Optional[pd.DataFrame] = None
         self.pair_symbol: Optional[str] = None
+        self.fear_greed_enabled: bool = False
 
         # ── Temporal Split (train/test) ──────────────────
         self._test_start = None
@@ -282,6 +283,7 @@ class CryptoBot(
             f"  Régimen:  {self.regime if self.regime else '❌ No detectado'}",
             f"  Strategy: {self.selected_strategy if self.selected_strategy else '❌ No seleccionada'}",
             f"  Modelo:   {self.model_name if self.model_name else '❌ No entrenado'}",
+            f"  FGI:      {'✅ Activado' if self.fear_greed_enabled else '❌ No activado'}",
             f"  Señales:  {'✅' if self.signals is not None else '❌ No generadas'}",
             f"  Testnet:  {'✅ Conectado' if self._testnet_connected else '❌ No conectado'}",
             f"  Trades:   {len(self.trades)} registrados",

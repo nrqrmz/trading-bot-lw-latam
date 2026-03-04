@@ -32,6 +32,19 @@ SCANNER_SYMBOLS = ["BTC", "ETH", "SOL", "BNB", "XRP"]
 SCANNER_LAST_N = 100
 
 # ══════════════════════════════════════════════════════════════
+#  SENTIMENT — Fear & Greed Index
+# ══════════════════════════════════════════════════════════════
+
+# URL de la API de alternative.me (Fear & Greed Index crypto)
+FGI_API_URL = "https://api.alternative.me/fng/"
+
+# Timeout en segundos para la llamada a la API
+FGI_API_TIMEOUT = 10
+
+# Maximo de registros historicos que soporta la API
+FGI_MAX_LIMIT = 1000
+
+# ══════════════════════════════════════════════════════════════
 #  FEATURES — Indicadores tecnicos (modo "core")
 # ══════════════════════════════════════════════════════════════
 
