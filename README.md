@@ -74,6 +74,7 @@ fetch_data() → create_features() → detect_regime() → recommend_strategies(
                                           backtest_plot()         execute()
                                           plot_performance()      status()
                                                                   trade_history()
+                                                                  disconnect_testnet()
                                                                        │
                                                               save() / load()
                                                               scan() / plot_scan()
@@ -403,6 +404,7 @@ bot.connect_testnet(api_key="...", api_secret="...")
 bot.execute()                               # ejecuta ultima senal en testnet
 bot.status()                                # balance, posiciones, P&L
 bot.trade_history()                         # historial como DataFrame
+bot.disconnect_testnet()                    # cierra conexion al testnet
 ```
 
 ---
