@@ -108,6 +108,17 @@ class BacktestMixin:
                 f"Verifica que haya datos en el rango seleccionado."
             )
 
+        # Verificar si hay señales accionables (BUY/SELL) en el scope
+        n_actionable = (scoped_signals != 0).sum()
+        if n_actionable == 0:
+            import warnings as _w2
+            _w2.warn(
+                f"⚠️ 0 señales BUY/SELL en scope='{scope}'. "
+                f"Backtest no generará trades.\n"
+                f"   Sugerencia: bot.get_signals(confidence_threshold=0.5)",
+                stacklevel=2,
+            )
+
         # Alinear datos OHLCV con el índice de señales filtradas
         bt_data = self.data.loc[scoped_signals.index].copy()
 
